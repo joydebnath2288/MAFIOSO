@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { env } from '../config/env';
 import { useAuth } from '../hooks/useAuth';
@@ -7,28 +7,36 @@ import { CloseIcon, LogOutIcon, MenuIcon } from './Icons';
 function getNavItemsForUser(user) {
   if (!user) {
     return [
-      { to: '/', label: 'Overview', end: true },
-      { to: '/health', label: 'System Health', end: false },
+      { to: '/', label: 'Home', end: true },
+      { to: '/about', label: 'About', end: false },
+      { to: '/services', label: 'Services', end: false },
+      { to: '/study-in-uk', label: 'Study in UK', end: false },
+      { to: '/scholarships', label: 'Scholarships', end: false },
+      { to: '/contact', label: 'Contact', end: false },
     ];
   }
   if (user.role === 'ADMIN') {
     return [
-      { to: '/', label: 'Overview', end: true },
+      { to: '/', label: 'Home', end: true },
+      { to: '/staff/dashboard', label: 'Overview', end: true },
       { to: '/staff/students', label: 'Students', end: false },
       { to: '/staff/consultants', label: 'Consultants', end: false },
       { to: '/health', label: 'System Health', end: false },
-      { to: '/staff/dashboard', label: 'Staff Dashboard', end: false },
     ];
   }
   if (user.role === 'CONSULTANT') {
     return [
-      { to: '/', label: 'Overview', end: true },
+      { to: '/', label: 'Home', end: true },
+      { to: '/staff/dashboard', label: 'Overview', end: true },
       { to: '/staff/assigned-students', label: 'Assigned Students', end: false },
-      { to: '/staff/dashboard', label: 'Staff Dashboard', end: false },
     ];
   }
   if (user.role === 'STUDENT') {
     return [
+      { to: '/', label: 'Home', end: true },
+      { to: '/services', label: 'Services', end: false },
+      { to: '/study-in-uk', label: 'Study in UK', end: false },
+      { to: '/scholarships', label: 'Scholarships', end: false },
       { to: '/student/dashboard', label: 'Student Dashboard', end: false },
       { to: '/student/profile', label: 'Profile', end: false },
     ];
@@ -43,6 +51,19 @@ export function Navbar() {
   const [signingOut, setSigningOut] = useState(false);
 
   const navItems = getNavItemsForUser(isAuthenticated ? user : null);
+
+  // Close drawer on Escape key
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') {
+        setMobileOpen(false);
+      }
+    }
+    if (mobileOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileOpen]);
 
   async function handleLogout() {
     if (signingOut) {
@@ -116,7 +137,7 @@ export function Navbar() {
                 Sign in
               </Link>
               <Link to="/register" className="btn btn-nav">
-                Register
+                Get Started
               </Link>
             </>
           )}
@@ -127,6 +148,7 @@ export function Navbar() {
           className="mobile-menu-btn"
           aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
           aria-expanded={mobileOpen}
+          aria-controls="mobile-navigation-drawer"
           onClick={() => setMobileOpen((prev) => !prev)}
         >
           {mobileOpen ? <CloseIcon /> : <MenuIcon />}
@@ -134,7 +156,7 @@ export function Navbar() {
       </div>
 
       {mobileOpen && (
-        <div className="mobile-drawer">
+        <div id="mobile-navigation-drawer" className="mobile-drawer" role="dialog" aria-modal="true">
           <div className="container mobile-drawer-inner">
             {navItems.map((item) => (
               <NavLink
@@ -149,7 +171,7 @@ export function Navbar() {
             ))}
 
             {isAuthenticated && user ? (
-              <>
+              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div className="mobile-user-row">
                   <span className="header-user-name">{user.fullName}</span>
                   <span className="mono-badge">{user.role}</span>
@@ -163,9 +185,9 @@ export function Navbar() {
                   <LogOutIcon />
                   <span>{signingOut ? 'Signing out' : 'Sign out'}</span>
                 </button>
-              </>
+              </div>
             ) : (
-              <div className="mobile-auth-actions">
+              <div className="mobile-auth-actions" style={{ marginTop: '16px', display: 'flex', gap: '10px' }}>
                 <Link
                   to="/login"
                   className="btn btn-secondary"
@@ -178,7 +200,7 @@ export function Navbar() {
                   className="btn btn-primary"
                   onClick={() => setMobileOpen(false)}
                 >
-                  Register
+                  Get Started
                 </Link>
               </div>
             )}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRightIcon, EyeIcon, EyeOffIcon, LockIcon } from '../components/Icons';
 import { useAuth } from '../hooks/useAuth';
@@ -30,6 +30,10 @@ export function LoginPage() {
   const { login, sessionExpiredNotice, clearSessionNotice } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    document.title = 'Sign In — MAFIOSO UK Education';
+  }, []);
 
   const initialEmail =
     (location.state && typeof location.state.registeredEmail === 'string' && location.state.registeredEmail) ||

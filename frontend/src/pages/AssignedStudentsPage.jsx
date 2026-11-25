@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { EmptyState } from '../components/EmptyState';
 import { UsersIcon } from '../components/Icons';
 import { fetchAssignedStudents } from '../services/authService';
 
@@ -9,6 +10,7 @@ export function AssignedStudentsPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    document.title = 'Assigned Students — MAFIOSO';
     let active = true;
     async function load() {
       setLoading(true);
@@ -66,13 +68,14 @@ export function AssignedStudentsPage() {
           </span>
         </div>
 
-        <div className="table-state-card">
-          <div className="table-empty-title">No student assignment records yet</div>
-          <div className="table-empty-desc">
-            {(data && data.message) ||
-              'Student-to-consultant assignment relationships will be added in upcoming milestones.'}
-          </div>
-        </div>
+        <EmptyState
+          icon={UsersIcon}
+          title="No student assignment records yet"
+          description={
+            (data && data.message) ||
+            'Student-to-consultant assignment relationships will be added in upcoming milestones.'
+          }
+        />
       </section>
     </div>
   );

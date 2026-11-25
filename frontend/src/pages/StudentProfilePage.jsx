@@ -14,6 +14,7 @@ export function StudentProfilePage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    document.title = 'Student Profile — MAFIOSO';
     let active = true;
     async function load() {
       setLoading(true);

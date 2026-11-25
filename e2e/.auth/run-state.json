@@ -1,0 +1,42 @@
+{
+  "runId": "1795604315312.4815ef",
+  "baseURL": "http://localhost",
+  "createdAt": "2026-11-25T10:58:37.966Z",
+  "student": {
+    "id": 29,
+    "fullName": "E2E Student 1795604315312.4815ef",
+    "email": "e2e.student.1795604315312.4815ef@example.com",
+    "phoneNumber": "+8801711001122",
+    "password": "MafiosoE2E#2026"
+  },
+  "studentAuthPath": "D:\\MAFIOSO\\MAFIOSO\\e2e\\.auth\\student.json",
+  "consultantConfigured": true,
+  "consultant": {
+    "id": 30,
+    "fullName": "E2E Consultant 1795604315312.4815ef",
+    "email": "e2e.consultant.1795604315312.4815ef@example.com",
+    "password": "MafiosoE2E#2026",
+    "disposable": true
+  },
+  "consultantAuthPath": "D:\\MAFIOSO\\MAFIOSO\\e2e\\.auth\\consultant.json",
+  "adminConfigured": false,
+  "admin": null,
+  "adminAuthPath": "D:\\MAFIOSO\\MAFIOSO\\e2e\\.auth\\admin.json",
+  "disposableAccounts": [
+    {
+      "role": "STUDENT",
+      "id": 29,
+      "email": "e2e.student.1795604315312.4815ef@example.com"
+    },
+    {
+      "role": "CONSULTANT",
+      "id": 30,
+      "email": "e2e.consultant.1795604315312.4815ef@example.com"
+    },
+    {
+      "role": "STUDENT",
+      "id": 31,
+      "email": "e2e.t1badge.1795604321108.179c93@example.com"
+    }
+  ]
+}

@@ -2,19 +2,24 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { ProtectedRoute, PublicOnlyRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+import { AboutPage } from './pages/AboutPage';
 import { AdminConsultantDetailPage } from './pages/AdminConsultantDetailPage';
 import { AdminConsultantsPage } from './pages/AdminConsultantsPage';
 import { AdminStudentDetailPage } from './pages/AdminStudentDetailPage';
 import { AdminStudentsPage } from './pages/AdminStudentsPage';
 import { AssignedStudentsPage } from './pages/AssignedStudentsPage';
+import { ContactPage } from './pages/ContactPage';
 import { HealthCheckPage } from './pages/HealthCheckPage';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { ScholarshipsPage } from './pages/ScholarshipsPage';
+import { ServicesPage } from './pages/ServicesPage';
 import { StaffDashboardPage } from './pages/StaffDashboardPage';
 import { StudentDashboardPage } from './pages/StudentDashboardPage';
 import { StudentProfilePage } from './pages/StudentProfilePage';
+import { StudyInUkPage } from './pages/StudyInUkPage';
 import { UnauthorizedPage } from './pages/UnauthorizedPage';
 
 export default function App() {
@@ -23,8 +28,16 @@ export default function App() {
       <AuthProvider>
         <Layout>
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/services" element={<ServicesPage />} />
+            <Route path="/study-in-uk" element={<StudyInUkPage />} />
+            <Route path="/scholarships" element={<ScholarshipsPage />} />
+            <Route path="/contact" element={<ContactPage />} />
             <Route path="/health" element={<HealthCheckPage />} />
+
+            {/* Auth routes */}
             <Route
               path="/login"
               element={

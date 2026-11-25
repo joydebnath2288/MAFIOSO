@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRightIcon, EyeIcon, EyeOffIcon, ShieldIcon } from '../components/Icons';
 import { useAuth } from '../hooks/useAuth';
@@ -27,6 +27,10 @@ const REGISTRATION_GUARDS = [
 
 export function RegisterPage() {
   const { register } = useAuth();
+
+  useEffect(() => {
+    document.title = 'Student Registration — MAFIOSO';
+  }, []);
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
