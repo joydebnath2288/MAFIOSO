@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context>
+    <!-- Tomcat 9 SameSite=Lax session cookie policy compatible with Nginx reverse proxy -->
+    <CookieProcessor className="org.apache.tomcat.util.http.Rfc6265CookieProcessor"
+                     sameSiteCookies="lax" />
+
+    <!-- Trust forwarded client IP and HTTPS protocol headers from the private Nginx proxy -->
+    <Valve className="org.apache.catalina.valves.RemoteIpValve"
+           remoteIpHeader="X-Forwarded-For"
+           protocolHeader="X-Forwarded-Proto"
+           protocolHeaderHttpsValue="https" />
+</Context>

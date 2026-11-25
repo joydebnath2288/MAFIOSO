@@ -7,8 +7,8 @@ export function NotFoundPage() {
         <span className="mono-label">HTTP 404 • SPA Route</span>
         <h1 className="page-title">Page not found</h1>
         <p className="page-subtitle">
-          This route is not defined in the Milestone 1 shell. Nginx correctly returned the React
-          SPA entry point so client-side routing handles direct refreshes.
+          This route is not defined in the MAFIOSO application shell. Nginx returned the React SPA
+          entry point so client-side routing handles direct refreshes cleanly.
         </p>
         <div className="hero-actions">
           <Link to="/" className="btn btn-primary">

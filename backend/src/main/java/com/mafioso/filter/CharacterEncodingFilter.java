@@ -6,14 +6,13 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import javax.servlet.annotation.WebFilter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 /**
  * Enforces UTF-8 character encoding across all incoming Servlet requests and responses.
+ * Registered explicitly in {@code WEB-INF/web.xml} to preserve deterministic filter ordering.
  */
-@WebFilter(filterName = "CharacterEncodingFilter", urlPatterns = {"/*"})
 public class CharacterEncodingFilter implements Filter {
 
     @Override
