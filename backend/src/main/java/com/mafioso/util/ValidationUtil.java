@@ -1,5 +1,6 @@
 package com.mafioso.util;
 
+import com.mafioso.dto.CreateConsultantRequest;
 import com.mafioso.dto.LoginRequest;
 import com.mafioso.dto.RegisterRequest;
 
@@ -127,44 +128,35 @@ public final class ValidationUtil {
     }
 
     public static Map<String, String> validateRegistration(RegisterRequest request) {
-        Map<String, String> errors = new LinkedHashMap<String, String>();
         if (request == null) {
+            Map<String, String> errors = new LinkedHashMap<String, String>();
             errors.put("request", "Registration payload is required.");
             return errors;
         }
+        return validateAccountFields(
+                request.getFullName(),
+                request.getEmail(),
+                request.getPassword(),
+                request.getConfirmPassword(),
+                true,
+                request.getPhoneNumber()
+        );
+    }
 
-        String fullName = normalizeFullName(request.getFullName());
-        if (fullName.isEmpty()) {
-            errors.put("fullName", "Full name is required.");
-        } else if (!isValidFullName(fullName)) {
-            errors.put("fullName", "Full name must be between 2 and 120 valid characters.");
+    public static Map<String, String> validateConsultantCreation(CreateConsultantRequest request) {
+        if (request == null) {
+            Map<String, String> errors = new LinkedHashMap<String, String>();
+            errors.put("request", "Consultant payload is required.");
+            return errors;
         }
-
-        String email = normalizeEmail(request.getEmail());
-        if (email.isEmpty()) {
-            errors.put("email", "Email address is required.");
-        } else if (!isValidEmail(email)) {
-            errors.put("email", "Enter a valid email address.");
-        }
-
-        String passwordError = validatePasswordPolicy(request.getPassword());
-        if (passwordError != null) {
-            errors.put("password", passwordError);
-        }
-
-        String confirmPassword = request.getConfirmPassword();
-        if (confirmPassword == null || confirmPassword.isEmpty()) {
-            errors.put("confirmPassword", "Confirm password is required.");
-        } else if (request.getPassword() != null && !request.getPassword().equals(confirmPassword)) {
-            errors.put("confirmPassword", "Passwords do not match.");
-        }
-
-        String phone = normalizePhoneNumber(request.getPhoneNumber());
-        if (!isValidPhoneNumber(phone)) {
-            errors.put("phoneNumber", "Enter a valid phone number (7 to 15 digits).");
-        }
-
-        return errors;
+        return validateAccountFields(
+                request.getFullName(),
+                request.getEmail(),
+                request.getPassword(),
+                request.getConfirmPassword(),
+                true,
+                request.getPhoneNumber()
+        );
     }
 
     public static Map<String, String> validateLogin(LoginRequest request) {
@@ -189,16 +181,25 @@ public final class ValidationUtil {
     }
 
     public static Map<String, String> validatePrivilegedAccount(String fullName, String email, String password) {
+        return validateAccountFields(fullName, email, password, null, false, null);
+    }
+
+    private static Map<String, String> validateAccountFields(String rawFullName,
+                                                             String rawEmail,
+                                                             String password,
+                                                             String confirmPassword,
+                                                             boolean requireConfirm,
+                                                             String rawPhoneNumber) {
         Map<String, String> errors = new LinkedHashMap<String, String>();
 
-        String cleanName = normalizeFullName(fullName);
+        String cleanName = normalizeFullName(rawFullName);
         if (cleanName.isEmpty()) {
             errors.put("fullName", "Full name is required.");
         } else if (!isValidFullName(cleanName)) {
             errors.put("fullName", "Full name must be between 2 and 120 valid characters.");
         }
 
-        String cleanEmail = normalizeEmail(email);
+        String cleanEmail = normalizeEmail(rawEmail);
         if (cleanEmail.isEmpty()) {
             errors.put("email", "Email address is required.");
         } else if (!isValidEmail(cleanEmail)) {
@@ -208,6 +209,19 @@ public final class ValidationUtil {
         String passwordError = validatePasswordPolicy(password);
         if (passwordError != null) {
             errors.put("password", passwordError);
+        }
+
+        if (requireConfirm) {
+            if (confirmPassword == null || confirmPassword.isEmpty()) {
+                errors.put("confirmPassword", "Confirm password is required.");
+            } else if (password != null && !password.equals(confirmPassword)) {
+                errors.put("confirmPassword", "Passwords do not match.");
+            }
+        }
+
+        String phone = normalizePhoneNumber(rawPhoneNumber);
+        if (!isValidPhoneNumber(phone)) {
+            errors.put("phoneNumber", "Enter a valid phone number (7 to 15 digits).");
         }
 
         return errors;

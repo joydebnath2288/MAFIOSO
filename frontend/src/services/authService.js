@@ -68,8 +68,16 @@ export function fetchStudentDashboard() {
   return requestJson('/api/v1/student/dashboard', { method: 'GET' });
 }
 
+export function fetchStudentProfile() {
+  return requestJson('/api/v1/student/profile', { method: 'GET' });
+}
+
 export function fetchConsultantDashboard() {
   return requestJson('/api/v1/consultant/dashboard', { method: 'GET' });
+}
+
+export function fetchAssignedStudents() {
+  return requestJson('/api/v1/consultant/assigned-students', { method: 'GET' });
 }
 
 export function fetchAdminDashboard() {

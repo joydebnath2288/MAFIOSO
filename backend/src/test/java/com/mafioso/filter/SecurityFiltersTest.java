@@ -1,6 +1,7 @@
 package com.mafioso.filter;
 
 import com.mafioso.dao.UserDAO;
+import com.mafioso.dto.DashboardMetricsResponse;
 import com.mafioso.model.AccountStatus;
 import com.mafioso.model.AuthenticatedUser;
 import com.mafioso.model.Role;
@@ -18,7 +19,9 @@ import java.io.StringWriter;
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -253,6 +256,11 @@ public class SecurityFiltersTest {
         }
 
         @Override
+        public User findByIdAndRole(Connection connection, long userId, Role expectedRole) {
+            return (user != null && user.getRole() == expectedRole) ? user : null;
+        }
+
+        @Override
         public boolean existsByEmail(Connection connection, String normalizedEmail) {
             return user != null;
         }
@@ -276,8 +284,28 @@ public class SecurityFiltersTest {
         }
 
         @Override
+        public boolean updateAccountStatus(Connection connection, long userId, Role expectedRole, AccountStatus status) {
+            return false;
+        }
+
+        @Override
         public Map<Role, Long> countUsersByRole() {
             return new HashMap<Role, Long>();
+        }
+
+        @Override
+        public DashboardMetricsResponse getDashboardMetrics() {
+            return new DashboardMetricsResponse();
+        }
+
+        @Override
+        public List<User> findUsersByRole(Role role, String search, AccountStatus statusFilter, int offset, int limit) {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public long countUsersByRoleAndFilter(Role role, String search, AccountStatus statusFilter) {
+            return 0L;
         }
     }
 }

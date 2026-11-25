@@ -1,6 +1,5 @@
 package com.mafioso.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mafioso.config.AppConfig;
 import com.mafioso.dto.ApiResponse;
 import com.mafioso.dto.AuthResponse;
@@ -27,10 +26,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -43,7 +39,6 @@ public class AuthController extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
     private static final Logger LOGGER = Logger.getLogger(AuthController.class.getName());
-    private static final int MAX_BODY_BYTES = 65536;
 
     private final transient AuthService authService;
 
@@ -149,7 +144,7 @@ public class AuthController extends HttpServlet {
     private void handleRegister(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         RegisterRequest registerRequest;
         try {
-            registerRequest = readJsonBody(req, RegisterRequest.class);
+            registerRequest = JsonUtil.readJsonBody(req, RegisterRequest.class);
         } catch (IllegalArgumentException ex) {
             JsonUtil.writeJson(resp, HttpServletResponse.SC_BAD_REQUEST,
                     ApiResponse.error("INVALID_JSON", ex.getMessage()));
@@ -191,7 +186,7 @@ public class AuthController extends HttpServlet {
     private void handleLogin(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         LoginRequest loginRequest;
         try {
-            loginRequest = readJsonBody(req, LoginRequest.class);
+            loginRequest = JsonUtil.readJsonBody(req, LoginRequest.class);
         } catch (IllegalArgumentException ex) {
             JsonUtil.writeJson(resp, HttpServletResponse.SC_BAD_REQUEST,
                     ApiResponse.error("INVALID_JSON", ex.getMessage()));
@@ -268,30 +263,5 @@ public class AuthController extends HttpServlet {
             return pathInfo.substring(0, pathInfo.length() - 1);
         }
         return pathInfo;
-    }
-
-    private static <T> T readJsonBody(HttpServletRequest req, Class<T> type) throws IOException {
-        byte[] buffer = new byte[4096];
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        int totalRead = 0;
-        try (InputStream in = req.getInputStream()) {
-            int n;
-            while ((n = in.read(buffer)) != -1) {
-                totalRead += n;
-                if (totalRead > MAX_BODY_BYTES) {
-                    throw new IllegalArgumentException("Request payload is too large.");
-                }
-                out.write(buffer, 0, n);
-            }
-        }
-        String raw = new String(out.toByteArray(), StandardCharsets.UTF_8).trim();
-        if (raw.isEmpty()) {
-            throw new IllegalArgumentException("Request body must be valid JSON.");
-        }
-        try {
-            return JsonUtil.getObjectMapper().readValue(raw, type);
-        } catch (JsonProcessingException ex) {
-            throw new IllegalArgumentException("Malformed JSON request body.");
-        }
     }
 }

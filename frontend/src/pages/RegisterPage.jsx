@@ -2,49 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRightIcon, EyeIcon, EyeOffIcon, ShieldIcon } from '../components/Icons';
 import { useAuth } from '../hooks/useAuth';
-
-const EMAIL_REGEX = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/;
-const PHONE_REGEX = /^\+?[0-9\s\-()]{7,20}$/;
-
-function evaluatePasswordRules(password) {
-  return [
-    {
-      key: 'length',
-      label: '8 to 72 characters',
-      passed: password.length >= 8 && new TextEncoder().encode(password).length <= 72,
-    },
-    {
-      key: 'case',
-      label: 'Uppercase and lowercase letters',
-      passed: /[A-Z]/.test(password) && /[a-z]/.test(password),
-    },
-    {
-      key: 'digit',
-      label: 'At least one number',
-      passed: /[0-9]/.test(password),
-    },
-    {
-      key: 'special',
-      label: 'At least one special character',
-      passed: /[^A-Za-z0-9\s]/.test(password),
-    },
-  ];
-}
-
-function validatePhone(phone) {
-  const trimmed = phone.trim();
-  if (!trimmed) {
-    return null;
-  }
-  if (!PHONE_REGEX.test(trimmed)) {
-    return 'Enter a valid phone number (7 to 15 digits).';
-  }
-  const digitCount = (trimmed.match(/[0-9]/g) || []).length;
-  if (digitCount < 7 || digitCount > 15) {
-    return 'Enter a valid phone number (7 to 15 digits).';
-  }
-  return null;
-}
+import { EMAIL_REGEX, evaluatePasswordRules, validatePhoneInput } from '../utils/validation';
 
 const REGISTRATION_GUARDS = [
   {
@@ -102,7 +60,7 @@ export function RegisterPage() {
       errors.email = 'Enter a valid email address.';
     }
 
-    const phoneError = validatePhone(phoneNumber);
+    const phoneError = validatePhoneInput(phoneNumber);
     if (phoneError) {
       errors.phoneNumber = phoneError;
     }

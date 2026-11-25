@@ -16,6 +16,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
@@ -36,7 +37,10 @@ public class ConsultantController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String subPath = req.getPathInfo();
-        if (subPath != null && !"/".equals(subPath) && !"/dashboard".equals(subPath)) {
+        boolean isDashboard = subPath == null || "/".equals(subPath) || "/dashboard".equals(subPath);
+        boolean isAssignedStudents = "/assigned-students".equals(subPath);
+
+        if (!isDashboard && !isAssignedStudents) {
             JsonUtil.writeJson(resp, HttpServletResponse.SC_NOT_FOUND,
                     ApiResponse.error("NOT_FOUND", "Consultant endpoint not found."));
             return;
@@ -51,12 +55,23 @@ public class ConsultantController extends HttpServlet {
 
         try {
             UserResponse staffProfile = authService.getActiveUserProfile(principal.getId());
-            boolean isAdmin = principal.getRole() == Role.ADMIN;
+            if (isAssignedStudents) {
+                Map<String, Object> assignedPayload = new LinkedHashMap<String, Object>();
+                assignedPayload.put("account", staffProfile);
+                assignedPayload.put("assignmentTrackingAvailable", Boolean.FALSE);
+                assignedPayload.put("items", Collections.emptyList());
+                assignedPayload.put("message",
+                        "Student-to-consultant assignment relationships are not implemented yet.");
+                JsonUtil.writeJson(resp, HttpServletResponse.SC_OK, ApiResponse.ok(assignedPayload));
+                return;
+            }
 
+            boolean isAdmin = principal.getRole() == Role.ADMIN;
             Map<String, Object> permissions = new LinkedHashMap<String, Object>();
             permissions.put("canAccessConsultantWorkspace", Boolean.TRUE);
             permissions.put("canAccessAdminWorkspace", Boolean.valueOf(isAdmin));
-            permissions.put("canManageStaffInFutureMilestones", Boolean.valueOf(isAdmin));
+            permissions.put("canManageStudents", Boolean.valueOf(isAdmin));
+            permissions.put("canManageConsultants", Boolean.valueOf(isAdmin));
 
             Map<String, Object> payload = new LinkedHashMap<String, Object>();
             payload.put("workspace", "STAFF_OPERATIONS");

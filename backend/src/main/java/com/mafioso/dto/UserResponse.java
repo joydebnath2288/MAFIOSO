@@ -17,6 +17,7 @@ public class UserResponse {
     private String role;
     private String status;
     private String createdAt;
+    private String updatedAt;
     private String lastLoginAt;
 
     public UserResponse() {
@@ -34,6 +35,7 @@ public class UserResponse {
         dto.setRole(user.getRole() != null ? user.getRole().name() : null);
         dto.setStatus(user.getStatus() != null ? user.getStatus().name() : null);
         dto.setCreatedAt(user.getCreatedAt() != null ? user.getCreatedAt().toString() : null);
+        dto.setUpdatedAt(user.getUpdatedAt() != null ? user.getUpdatedAt().toString() : null);
         dto.setLastLoginAt(user.getLastLoginAt() != null ? user.getLastLoginAt().toString() : null);
         return dto;
     }
@@ -92,6 +94,14 @@ public class UserResponse {
 
     public void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(String updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     public String getLastLoginAt() {

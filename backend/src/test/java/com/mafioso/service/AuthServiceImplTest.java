@@ -2,6 +2,7 @@ package com.mafioso.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mafioso.dao.UserDAO;
+import com.mafioso.dto.DashboardMetricsResponse;
 import com.mafioso.dto.LoginRequest;
 import com.mafioso.dto.RegisterRequest;
 import com.mafioso.dto.UserResponse;
@@ -18,7 +19,9 @@ import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -175,6 +178,12 @@ public class AuthServiceImplTest {
         }
 
         @Override
+        public User findByIdAndRole(Connection connection, long userId, Role expectedRole) {
+            User u = byId.get(userId);
+            return (u != null && u.getRole() == expectedRole) ? u : null;
+        }
+
+        @Override
         public boolean existsByEmail(Connection connection, String normalizedEmail) {
             return byEmail.containsKey(normalizedEmail);
         }
@@ -213,6 +222,16 @@ public class AuthServiceImplTest {
         }
 
         @Override
+        public boolean updateAccountStatus(Connection connection, long userId, Role expectedRole, AccountStatus status) {
+            User u = findByIdAndRole(connection, userId, expectedRole);
+            if (u == null) {
+                return false;
+            }
+            u.setStatus(status);
+            return true;
+        }
+
+        @Override
         public Map<Role, Long> countUsersByRole() {
             Map<Role, Long> counts = new EnumMap<Role, Long>(Role.class);
             for (Role role : Role.values()) {
@@ -222,6 +241,21 @@ public class AuthServiceImplTest {
                 counts.put(u.getRole(), counts.get(u.getRole()) + 1L);
             }
             return counts;
+        }
+
+        @Override
+        public DashboardMetricsResponse getDashboardMetrics() {
+            return new DashboardMetricsResponse();
+        }
+
+        @Override
+        public List<User> findUsersByRole(Role role, String search, AccountStatus statusFilter, int offset, int limit) {
+            return new ArrayList<User>();
+        }
+
+        @Override
+        public long countUsersByRoleAndFilter(Role role, String search, AccountStatus statusFilter) {
+            return 0L;
         }
     }
 }

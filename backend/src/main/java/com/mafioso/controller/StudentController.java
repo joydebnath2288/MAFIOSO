@@ -35,7 +35,10 @@ public class StudentController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String subPath = req.getPathInfo();
-        if (subPath != null && !"/".equals(subPath) && !"/dashboard".equals(subPath) && !"/me".equals(subPath)) {
+        boolean isDashboard = subPath == null || "/".equals(subPath) || "/dashboard".equals(subPath) || "/me".equals(subPath);
+        boolean isProfile = "/profile".equals(subPath);
+
+        if (!isDashboard && !isProfile) {
             JsonUtil.writeJson(resp, HttpServletResponse.SC_NOT_FOUND,
                     ApiResponse.error("NOT_FOUND", "Student endpoint not found."));
             return;
@@ -51,15 +54,21 @@ public class StudentController extends HttpServlet {
         try {
             UserResponse selfProfile = authService.getActiveUserProfile(principal.getId());
             Map<String, Object> payload = new LinkedHashMap<String, Object>();
-            payload.put("workspace", "STUDENT_PORTAL");
+            payload.put("workspace", isProfile ? "STUDENT_PROFILE" : "STUDENT_PORTAL");
             payload.put("account", selfProfile);
             payload.put("accessScope", "SELF_ONLY");
-            payload.put("plannedModules", Arrays.asList(
-                    "Academic Profile & Transcript Review",
-                    "UK University & Scholarship Shortlist",
-                    "Private Document Vault",
-                    "Consultancy Fee & CAS Readiness"
-            ));
+            if (isProfile) {
+                payload.put("academicProfileAvailable", Boolean.FALSE);
+                payload.put("academicProfileNote",
+                        "Academic credential uploads, IELTS scores, and UK university shortlisting will be enabled in upcoming milestones.");
+            } else {
+                payload.put("plannedModules", Arrays.asList(
+                        "Academic Profile & Transcript Review",
+                        "UK University & Scholarship Shortlist",
+                        "Private Document Vault",
+                        "Consultancy Fee & CAS Readiness"
+                ));
+            }
             JsonUtil.writeJson(resp, HttpServletResponse.SC_OK, ApiResponse.ok(payload));
         } catch (SQLException ex) {
             LOGGER.log(Level.SEVERE, "Database error loading student workspace", ex);

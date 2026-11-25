@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ShieldIcon, UserIcon } from '../components/Icons';
+import { Link } from 'react-router-dom';
+import { ArrowRightIcon, ShieldIcon, UserIcon } from '../components/Icons';
 import { useAuth } from '../hooks/useAuth';
 import { fetchStudentDashboard } from '../services/authService';
 
@@ -48,6 +49,10 @@ export function StudentDashboardPage() {
         <div className="workspace-status-group">
           <span className="status-pill status-pill-up">Session Active</span>
           <span className="mono-badge">{account ? account.role : 'STUDENT'}</span>
+          <Link to="/student/profile" className="btn btn-secondary btn-compact">
+            <span>Profile</span>
+            <ArrowRightIcon />
+          </Link>
         </div>
       </header>
 

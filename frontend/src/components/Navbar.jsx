@@ -4,14 +4,45 @@ import { env } from '../config/env';
 import { useAuth } from '../hooks/useAuth';
 import { CloseIcon, LogOutIcon, MenuIcon } from './Icons';
 
+function getNavItemsForUser(user) {
+  if (!user) {
+    return [
+      { to: '/', label: 'Overview', end: true },
+      { to: '/health', label: 'System Health', end: false },
+    ];
+  }
+  if (user.role === 'ADMIN') {
+    return [
+      { to: '/', label: 'Overview', end: true },
+      { to: '/staff/students', label: 'Students', end: false },
+      { to: '/staff/consultants', label: 'Consultants', end: false },
+      { to: '/health', label: 'System Health', end: false },
+      { to: '/staff/dashboard', label: 'Staff Dashboard', end: false },
+    ];
+  }
+  if (user.role === 'CONSULTANT') {
+    return [
+      { to: '/', label: 'Overview', end: true },
+      { to: '/staff/assigned-students', label: 'Assigned Students', end: false },
+      { to: '/staff/dashboard', label: 'Staff Dashboard', end: false },
+    ];
+  }
+  if (user.role === 'STUDENT') {
+    return [
+      { to: '/student/dashboard', label: 'Student Dashboard', end: false },
+      { to: '/student/profile', label: 'Profile', end: false },
+    ];
+  }
+  return [];
+}
+
 export function Navbar() {
-  const { user, isAuthenticated, loading, logout, getDashboardPath } = useAuth();
+  const { user, isAuthenticated, loading, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
-  const dashboardPath = user ? getDashboardPath(user.role) : null;
-  const dashboardLabel = user && user.role === 'STUDENT' ? 'Student Dashboard' : 'Staff Dashboard';
+  const navItems = getNavItemsForUser(isAuthenticated ? user : null);
 
   async function handleLogout() {
     if (signingOut) {
@@ -48,27 +79,16 @@ export function Navbar() {
         </Link>
 
         <nav className="header-nav" aria-label="Primary navigation">
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
-          >
-            Overview
-          </NavLink>
-          <NavLink
-            to="/health"
-            className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
-          >
-            System Health
-          </NavLink>
-          {isAuthenticated && dashboardPath && (
+          {navItems.map((item) => (
             <NavLink
-              to={dashboardPath}
+              key={item.to}
+              to={item.to}
+              end={item.end}
               className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
             >
-              {dashboardLabel}
+              {item.label}
             </NavLink>
-          )}
+          ))}
         </nav>
 
         <div className="header-actions">
@@ -116,30 +136,20 @@ export function Navbar() {
       {mobileOpen && (
         <div className="mobile-drawer">
           <div className="container mobile-drawer-inner">
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
-              onClick={() => setMobileOpen(false)}
-            >
-              Overview
-            </NavLink>
-            <NavLink
-              to="/health"
-              className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
-              onClick={() => setMobileOpen(false)}
-            >
-              System Health
-            </NavLink>
-            {isAuthenticated && dashboardPath ? (
+            {navItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
+                onClick={() => setMobileOpen(false)}
+              >
+                {item.label}
+              </NavLink>
+            ))}
+
+            {isAuthenticated && user ? (
               <>
-                <NavLink
-                  to={dashboardPath}
-                  className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {dashboardLabel}
-                </NavLink>
                 <div className="mobile-user-row">
                   <span className="header-user-name">{user.fullName}</span>
                   <span className="mono-badge">{user.role}</span>

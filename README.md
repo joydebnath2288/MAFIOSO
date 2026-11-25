@@ -39,6 +39,7 @@ Open `http://localhost` for the landing page and `http://localhost/health` for l
 
 ## Documentation
 
+- [Running MAFIOSO: Docker On/Off & Local Setup Without Docker](docs/LOCAL_AND_DOCKER_RUN_GUIDE.md)
 - [Authentication, CSRF & Admin Bootstrap Guide](docs/AUTHENTICATION_AND_SECURITY.md)
 - [Docker Setup Guide for New PCs](docs/DOCKER_SETUP_GUIDE.md)
 - [Architecture Overview](docs/ARCHITECTURE.md)
