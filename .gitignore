@@ -3,6 +3,10 @@
 .env.*
 !.env.example
 
+# Local Docker Compose overrides (per-developer ports/tools)
+compose.override.yaml
+compose.override.yml
+
 # Java / Maven
 backend/target/
 *.war
