@@ -10,10 +10,10 @@ export function Footer() {
             <div className="footer-brand-title">
               <span className="brand-mark" aria-hidden="true">
                 <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
-                  <rect width="32" height="32" rx="7" fill="#1B4D3E" />
+                  <rect width="32" height="32" rx="7" fill="var(--accent)" />
                   <path
                     d="M8 22V10L16 17L24 10V22"
-                    stroke="#FDFBF7"
+                    stroke="var(--on-accent)"
                     strokeWidth="2.4"
                     strokeLinecap="round"
                     strokeLinejoin="round"

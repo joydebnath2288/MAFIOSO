@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { env } from '../config/env';
 import { useAuth } from '../hooks/useAuth';
 import { CloseIcon, LogOutIcon, MenuIcon } from './Icons';
+import { ThemeSwitcher } from './ThemeSwitcher';
 
 function getNavItemsForUser(user) {
   if (!user) {
@@ -86,10 +87,10 @@ export function Navbar() {
         <Link to="/" className="brand" aria-label="MAFIOSO Home" onClick={() => setMobileOpen(false)}>
           <span className="brand-mark" aria-hidden="true">
             <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
-              <rect width="32" height="32" rx="7" fill="#1B4D3E" />
+              <rect width="32" height="32" rx="7" fill="var(--accent)" />
               <path
                 d="M8 22V10L16 17L24 10V22"
-                stroke="#FDFBF7"
+                stroke="var(--on-accent)"
                 strokeWidth="2.4"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -114,6 +115,7 @@ export function Navbar() {
         </nav>
 
         <div className="header-actions">
+          <ThemeSwitcher />
           {loading ? (
             <span className="mono-label">Checking session</span>
           ) : isAuthenticated && user ? (
@@ -144,16 +146,19 @@ export function Navbar() {
           )}
         </div>
 
-        <button
-          type="button"
-          className="mobile-menu-btn"
-          aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
-          aria-expanded={mobileOpen}
-          aria-controls="mobile-navigation-drawer"
-          onClick={() => setMobileOpen((prev) => !prev)}
-        >
-          {mobileOpen ? <CloseIcon /> : <MenuIcon />}
-        </button>
+        <div className="header-mobile-controls">
+          <ThemeSwitcher compact />
+          <button
+            type="button"
+            className="mobile-menu-btn"
+            aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-navigation-drawer"
+            onClick={() => setMobileOpen((prev) => !prev)}
+          >
+            {mobileOpen ? <CloseIcon /> : <MenuIcon />}
+          </button>
+        </div>
       </div>
 
       {mobileOpen && (

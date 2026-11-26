@@ -15,6 +15,29 @@
       href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap"
       rel="stylesheet"
     />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('mafioso_theme');
+          var valid = [
+            'classic',
+            'one-dark',
+            'catppuccin',
+            'rose-pine',
+            'solarized',
+            'dracula',
+            'tokyo-night',
+            'strawberry-daiquiri',
+            'synthwave-84',
+            'emerald-forest'
+          ];
+          if (t && valid.indexOf(t) !== -1) {
+            document.documentElement.dataset.theme = t;
+            document.documentElement.style.colorScheme = t === 'classic' ? 'light' : 'dark';
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

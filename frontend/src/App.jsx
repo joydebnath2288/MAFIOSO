@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { ProtectedRoute, PublicOnlyRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { AboutPage } from './pages/AboutPage';
 import { AdminConsultantDetailPage } from './pages/AdminConsultantDetailPage';
 import { AdminConsultantsPage } from './pages/AdminConsultantsPage';
@@ -31,9 +32,10 @@ import { UnauthorizedPage } from './pages/UnauthorizedPage';
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Layout>
-          <Routes>
+      <ThemeProvider>
+        <AuthProvider>
+          <Layout>
+            <Routes>
             {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/about" element={<AboutPage />} />
@@ -182,8 +184,9 @@ export default function App() {
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
-        </Layout>
-      </AuthProvider>
+          </Layout>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }
