@@ -1,14 +1,28 @@
 package com.mafioso.service;
 
+import com.mafioso.dao.ApplicationDAO;
+import com.mafioso.dao.ApplicationDAOImpl;
+import com.mafioso.dao.ApplicationDocumentDAO;
+import com.mafioso.dao.ApplicationDocumentDAOImpl;
+import com.mafioso.dao.ConsultantAssignmentDAO;
+import com.mafioso.dao.ConsultantAssignmentDAOImpl;
+import com.mafioso.dao.StudentProfileDAO;
+import com.mafioso.dao.StudentProfileDAOImpl;
 import com.mafioso.dao.UserDAO;
 import com.mafioso.dao.UserDAOImpl;
+import com.mafioso.dto.ApplicationDocumentResponse;
+import com.mafioso.dto.ApplicationResponse;
 import com.mafioso.dto.ConsultantSummaryResponse;
 import com.mafioso.dto.CreateConsultantRequest;
 import com.mafioso.dto.DashboardMetricsResponse;
 import com.mafioso.dto.PagedResponse;
+import com.mafioso.dto.StudentProfileResponse;
 import com.mafioso.dto.UserResponse;
 import com.mafioso.model.AccountStatus;
+import com.mafioso.model.Application;
+import com.mafioso.model.ApplicationDocument;
 import com.mafioso.model.Role;
+import com.mafioso.model.StudentProfile;
 import com.mafioso.model.User;
 import com.mafioso.util.DatabaseUtil;
 import com.mafioso.util.PasswordUtil;
@@ -26,7 +40,7 @@ import java.util.Map;
 
 /**
  * Administrative operations for inspecting students, managing account activation status,
- * and securely provisioning {@code CONSULTANT} accounts.
+ * securely provisioning {@code CONSULTANT} accounts, and surfacing application/assignment metrics.
  */
 public class AdminUserServiceImpl implements AdminUserService {
 
@@ -35,14 +49,38 @@ public class AdminUserServiceImpl implements AdminUserService {
     private static final int OVERVIEW_RECENT_LIMIT = 5;
 
     private final UserDAO userDao;
+    private final StudentProfileDAO profileDao;
+    private final ApplicationDAO applicationDao;
+    private final ConsultantAssignmentDAO assignmentDao;
+    private final ApplicationDocumentDAO documentDao;
     private final AuthServiceImpl.ConnectionSupplier connectionSupplier;
 
     public AdminUserServiceImpl() {
-        this(new UserDAOImpl(), DatabaseUtil::getConnection);
+        this(
+                new UserDAOImpl(),
+                new StudentProfileDAOImpl(),
+                new ApplicationDAOImpl(),
+                new ConsultantAssignmentDAOImpl(),
+                new ApplicationDocumentDAOImpl(),
+                DatabaseUtil::getConnection
+        );
     }
 
     public AdminUserServiceImpl(UserDAO userDao, AuthServiceImpl.ConnectionSupplier connectionSupplier) {
+        this(userDao, null, null, null, null, connectionSupplier);
+    }
+
+    public AdminUserServiceImpl(UserDAO userDao,
+                                StudentProfileDAO profileDao,
+                                ApplicationDAO applicationDao,
+                                ConsultantAssignmentDAO assignmentDao,
+                                ApplicationDocumentDAO documentDao,
+                                AuthServiceImpl.ConnectionSupplier connectionSupplier) {
         this.userDao = userDao;
+        this.profileDao = profileDao;
+        this.applicationDao = applicationDao;
+        this.assignmentDao = assignmentDao;
+        this.documentDao = documentDao;
         this.connectionSupplier = connectionSupplier;
     }
 
@@ -62,10 +100,8 @@ public class AdminUserServiceImpl implements AdminUserService {
             recentStudents.add(UserResponse.fromUser(student));
         }
 
-        List<ConsultantSummaryResponse> consultants = new ArrayList<ConsultantSummaryResponse>(consultantsRaw.size());
-        for (User consultant : consultantsRaw) {
-            consultants.add(ConsultantSummaryResponse.fromUser(consultant));
-        }
+        boolean trackingEnabled = assignmentDao != null && applicationDao != null;
+        List<ConsultantSummaryResponse> consultants = buildConsultantSummaries(consultantsRaw, trackingEnabled);
 
         Map<String, Long> roleCounts = new LinkedHashMap<String, Long>();
         roleCounts.put(Role.STUDENT.name(), metrics.getTotalStudents());
@@ -79,7 +115,23 @@ public class AdminUserServiceImpl implements AdminUserService {
         payload.put("roleCounts", roleCounts);
         payload.put("recentStudents", recentStudents);
         payload.put("consultants", consultants);
-        payload.put("assignmentTrackingAvailable", Boolean.FALSE);
+        payload.put("assignmentTrackingAvailable", Boolean.valueOf(trackingEnabled));
+
+        if (trackingEnabled) {
+            try (Connection connection = connectionSupplier.get()) {
+                Map<String, Long> appMetrics = applicationDao.getApplicationMetrics(connection);
+                if (documentDao != null) {
+                    appMetrics.put("pendingDocumentReviews", Long.valueOf(documentDao.countPendingReviewAll(connection)));
+                }
+                List<Application> recentAppsRaw = applicationDao.findAll(connection, null, null, null, null, false, 0, OVERVIEW_RECENT_LIMIT);
+                List<ApplicationResponse> recentApps = new ArrayList<ApplicationResponse>(recentAppsRaw.size());
+                for (Application app : recentAppsRaw) {
+                    recentApps.add(ApplicationResponse.from(app));
+                }
+                payload.put("applicationMetrics", appMetrics);
+                payload.put("recentApplications", recentApps);
+            }
+        }
         return payload;
     }
 
@@ -114,9 +166,30 @@ public class AdminUserServiceImpl implements AdminUserService {
             }
             Map<String, Object> detail = new LinkedHashMap<String, Object>();
             detail.put("student", UserResponse.fromUser(student));
-            detail.put("academicProfileAvailable", Boolean.FALSE);
-            detail.put("academicProfileNote",
-                    "Academic credentials, UK shortlists, and document vault records will appear here in upcoming milestones.");
+
+            if (profileDao != null && applicationDao != null && documentDao != null) {
+                StudentProfile profile = profileDao.findByUserId(connection, studentId);
+                List<Application> apps = applicationDao.findByStudentId(connection, studentId, null, 0, 50);
+                List<ApplicationDocument> docs = documentDao.findByStudentId(connection, studentId, null, null, null);
+
+                List<ApplicationResponse> appDtos = new ArrayList<ApplicationResponse>(apps.size());
+                for (Application app : apps) {
+                    appDtos.add(ApplicationResponse.from(app));
+                }
+                List<ApplicationDocumentResponse> docDtos = new ArrayList<ApplicationDocumentResponse>(docs.size());
+                for (ApplicationDocument doc : docs) {
+                    docDtos.add(ApplicationDocumentResponse.from(doc));
+                }
+
+                detail.put("academicProfileAvailable", Boolean.TRUE);
+                detail.put("profile", StudentProfileResponse.from(student, profile));
+                detail.put("applications", appDtos);
+                detail.put("documents", docDtos);
+            } else {
+                detail.put("academicProfileAvailable", Boolean.FALSE);
+                detail.put("academicProfileNote",
+                        "Academic credentials, UK shortlists, and document vault records will appear here in upcoming milestones.");
+            }
             return detail;
         }
     }
@@ -145,10 +218,8 @@ public class AdminUserServiceImpl implements AdminUserService {
                 ? Collections.<User>emptyList()
                 : userDao.findUsersByRole(Role.CONSULTANT, search, statusFilter, offset, safeSize);
 
-        List<ConsultantSummaryResponse> items = new ArrayList<ConsultantSummaryResponse>(rows.size());
-        for (User user : rows) {
-            items.add(ConsultantSummaryResponse.fromUser(user));
-        }
+        boolean trackingEnabled = assignmentDao != null;
+        List<ConsultantSummaryResponse> items = buildConsultantSummaries(rows, trackingEnabled);
         return new PagedResponse<ConsultantSummaryResponse>(items, safePage, safeSize, total);
     }
 
@@ -159,13 +230,60 @@ public class AdminUserServiceImpl implements AdminUserService {
             if (consultant == null) {
                 throw new ResourceNotFoundException("Consultant account not found.");
             }
+            ConsultantSummaryResponse dto = ConsultantSummaryResponse.fromUser(consultant);
             Map<String, Object> detail = new LinkedHashMap<String, Object>();
-            detail.put("consultant", ConsultantSummaryResponse.fromUser(consultant));
-            detail.put("assignmentTrackingAvailable", Boolean.FALSE);
-            detail.put("assignmentNote",
-                    "Student-to-consultant assignment relationships are not yet enabled in this milestone.");
+
+            if (assignmentDao != null && applicationDao != null) {
+                Map<Long, Long> counts = assignmentDao.countActiveStudentsByConsultantIds(
+                        connection, Collections.singletonList(Long.valueOf(consultantId)));
+                dto.setAssignmentTrackingAvailable(true);
+                dto.setAssignedStudentCount(counts.getOrDefault(Long.valueOf(consultantId), 0L));
+
+                List<Application> apps = applicationDao.findByConsultantId(connection, consultantId, null, null, 0, 50);
+                List<ApplicationResponse> appDtos = new ArrayList<ApplicationResponse>(apps.size());
+                for (Application app : apps) {
+                    appDtos.add(ApplicationResponse.from(app));
+                }
+                detail.put("assignmentTrackingAvailable", Boolean.TRUE);
+                detail.put("assignedApplications", appDtos);
+                detail.put("assignedStudents", assignmentDao.findAssignedStudentsByConsultant(connection, consultantId, null, 0, 50));
+            } else {
+                detail.put("assignmentTrackingAvailable", Boolean.FALSE);
+                detail.put("assignmentNote",
+                        "Student-to-consultant assignment relationships are not yet enabled in this milestone.");
+            }
+
+            detail.put("consultant", dto);
             return detail;
         }
+    }
+
+    private List<ConsultantSummaryResponse> buildConsultantSummaries(List<User> rows, boolean trackingEnabled) throws SQLException {
+        List<ConsultantSummaryResponse> items = new ArrayList<ConsultantSummaryResponse>(rows.size());
+        if (rows.isEmpty()) {
+            return items;
+        }
+
+        Map<Long, Long> counts = Collections.emptyMap();
+        if (trackingEnabled) {
+            List<Long> ids = new ArrayList<Long>(rows.size());
+            for (User u : rows) {
+                ids.add(u.getId());
+            }
+            try (Connection connection = connectionSupplier.get()) {
+                counts = assignmentDao.countActiveStudentsByConsultantIds(connection, ids);
+            }
+        }
+
+        for (User user : rows) {
+            ConsultantSummaryResponse dto = ConsultantSummaryResponse.fromUser(user);
+            if (trackingEnabled) {
+                dto.setAssignmentTrackingAvailable(true);
+                dto.setAssignedStudentCount(counts.getOrDefault(user.getId(), 0L));
+            }
+            items.add(dto);
+        }
+        return items;
     }
 
     @Override

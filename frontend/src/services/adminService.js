@@ -57,3 +57,70 @@ export function updateAdminConsultantStatus(consultantId, status) {
     body: { status },
   });
 }
+
+export function fetchAdminApplications({
+  search = '',
+  status = 'ALL',
+  degreeLevel = 'ALL',
+  consultantId = '',
+  unassignedOnly = false,
+  page = 1,
+  pageSize = 10,
+} = {}) {
+  const params = new URLSearchParams();
+  if (search && search.trim()) {
+    params.set('search', search.trim());
+  }
+  if (status && status !== 'ALL') {
+    params.set('status', status);
+  }
+  if (degreeLevel && degreeLevel !== 'ALL') {
+    params.set('degreeLevel', degreeLevel);
+  }
+  if (consultantId) {
+    params.set('consultantId', String(consultantId));
+  }
+  if (unassignedOnly) {
+    params.set('unassignedOnly', 'true');
+  }
+  params.set('page', String(page));
+  params.set('pageSize', String(pageSize));
+  return requestJson(`/api/v1/admin/applications?${params.toString()}`, { method: 'GET' });
+}
+
+export function fetchAdminApplicationDetail(applicationId) {
+  return requestJson(`/api/v1/admin/applications/${applicationId}`, { method: 'GET' });
+}
+
+export function updateAdminApplicationStatus(applicationId, { status, note = '' }) {
+  return requestJson(`/api/v1/admin/applications/${applicationId}/status`, {
+    method: 'PUT',
+    body: { status, note: note || null },
+  });
+}
+
+export function assignAdminConsultant(applicationId, { consultantId, note = '' }) {
+  return requestJson(`/api/v1/admin/applications/${applicationId}/assign-consultant`, {
+    method: 'POST',
+    body: { consultantId: Number(consultantId), note: note || null },
+  });
+}
+
+export function removeAdminConsultantAssignment(applicationId, note = '') {
+  const params = new URLSearchParams();
+  if (note && note.trim()) {
+    params.set('note', note.trim());
+  }
+  const qs = params.toString();
+  return requestJson(
+    `/api/v1/admin/applications/${applicationId}/assign-consultant${qs ? `?${qs}` : ''}`,
+    { method: 'DELETE' }
+  );
+}
+
+export function reviewAdminDocument(documentId, { reviewStatus, reviewNote = '' }) {
+  return requestJson(`/api/v1/admin/documents/${documentId}/review`, {
+    method: 'PUT',
+    body: { reviewStatus, reviewNote: reviewNote || null },
+  });
+}

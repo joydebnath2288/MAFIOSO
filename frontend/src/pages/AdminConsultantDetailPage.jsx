@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { DataTable } from '../components/DataTable';
 import { DetailCard } from '../components/DetailCard';
-import { ArrowLeftIcon, UsersIcon, UserIcon } from '../components/Icons';
+import { ArrowLeftIcon, UserIcon, UsersIcon } from '../components/Icons';
 import { StatusBadge } from '../components/StatusBadge';
 import {
   fetchAdminConsultantDetail,
   updateAdminConsultantStatus,
 } from '../services/adminService';
-import { formatDateTime } from '../utils/validation';
+import { formatDateOnly, formatDateTime } from '../utils/validation';
 
 export function AdminConsultantDetailPage() {
   const { id } = useParams();
@@ -36,11 +37,10 @@ export function AdminConsultantDetailPage() {
   }, [loadDetail]);
 
   const consultant = detail && detail.consultant;
+  const assignedApps = (detail && detail.assignedApplications) || [];
 
   async function handleConfirmToggle() {
-    if (!consultant || toggling) {
-      return;
-    }
+    if (!consultant || toggling) return;
     setToggling(true);
     setFeedback('');
     setError('');
@@ -59,6 +59,49 @@ export function AdminConsultantDetailPage() {
       setToggling(false);
     }
   }
+
+  const appColumns = [
+    {
+      key: 'referenceNumber',
+      header: 'Reference',
+      render: (row) => <span className="mono-val">{row.referenceNumber}</span>,
+    },
+    {
+      key: 'studentName',
+      header: 'Student',
+      render: (row) => (
+        <div>
+          <div className="table-primary-text">{row.studentName}</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{row.studentEmail}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'preferredSubject',
+      header: 'Program',
+      render: (row) => <span>{row.degreeLevel} — {row.preferredSubject}</span>,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (row) => <StatusBadge status={row.status} />,
+    },
+    {
+      key: 'submittedAt',
+      header: 'Submitted',
+      render: (row) => <span className="mono-val">{formatDateOnly(row.submittedAt)}</span>,
+    },
+    {
+      key: 'actions',
+      header: 'Action',
+      align: 'right',
+      render: (row) => (
+        <Link to={`/staff/applications/${row.id}`} className="btn btn-secondary btn-compact">
+          Manage
+        </Link>
+      ),
+    },
+  ];
 
   return (
     <div className="container workspace-page">
@@ -110,48 +153,56 @@ export function AdminConsultantDetailPage() {
           <span className="mono-label">Loading consultant details</span>
         </div>
       ) : consultant ? (
-        <div className="workspace-grid">
-          <DetailCard
-            title="Consultant Account"
-            subtitle={`GET /api/v1/admin/consultants/${consultant.id}`}
-            icon={UserIcon}
-            badge={<StatusBadge status={consultant.status} />}
-            rows={[
-              { label: 'Consultant ID', value: `#${consultant.id}`, mono: true },
-              { label: 'Full Name', value: consultant.fullName },
-              { label: 'Email Address', value: consultant.email, mono: true },
-              { label: 'Phone Number', value: consultant.phoneNumber || 'Not provided', mono: true },
-              { label: 'Role', value: consultant.role, mono: true },
-              { label: 'Registration Date', value: formatDateTime(consultant.createdAt), mono: true },
-              { label: 'Last Updated', value: formatDateTime(consultant.updatedAt), mono: true },
-              {
-                label: 'Last Login',
-                value: consultant.lastLoginAt ? formatDateTime(consultant.lastLoginAt) : 'Never signed in',
-                mono: true,
-              },
-            ]}
-          />
+        <div className="admin-overview-stack">
+          <div className="workspace-grid">
+            <DetailCard
+              title="Consultant Account"
+              subtitle={`GET /api/v1/admin/consultants/${consultant.id}`}
+              icon={UserIcon}
+              badge={<StatusBadge status={consultant.status} />}
+              rows={[
+                { label: 'Consultant ID', value: `#${consultant.id}`, mono: true },
+                { label: 'Full Name', value: consultant.fullName },
+                { label: 'Email Address', value: consultant.email, mono: true },
+                { label: 'Phone Number', value: consultant.phoneNumber || 'Not provided', mono: true },
+                { label: 'Role', value: consultant.role, mono: true },
+                { label: 'Registration Date', value: formatDateTime(consultant.createdAt), mono: true },
+                { label: 'Last Login', value: consultant.lastLoginAt ? formatDateTime(consultant.lastLoginAt) : 'Never signed in', mono: true },
+              ]}
+            />
 
-          <DetailCard
-            title="Student Assignments"
-            subtitle="Assignment relationship tracking"
-            icon={UsersIcon}
-            badge={<span className="status-pill status-pill-pending">UNAVAILABLE</span>}
-            rows={[
-              {
-                label: 'Assigned Student Count',
-                value:
-                  consultant.assignmentTrackingAvailable && consultant.assignedStudentCount != null
-                    ? consultant.assignedStudentCount
-                    : 'Unavailable (not tracked yet)',
-                mono: true,
-              },
-              {
-                label: 'Status',
-                value: detail.assignmentNote,
-              },
-            ]}
-          />
+            <DetailCard
+              title="Caseload Summary"
+              subtitle="Active assignments"
+              icon={UsersIcon}
+              badge={<span className="status-pill status-pill-up">TRACKED</span>}
+              rows={[
+                {
+                  label: 'Assigned Student Count',
+                  value: consultant.assignedStudentCount != null ? consultant.assignedStudentCount : 0,
+                  mono: true,
+                },
+                {
+                  label: 'Assigned Applications',
+                  value: assignedApps.length,
+                  mono: true,
+                },
+              ]}
+            />
+          </div>
+
+          <section className="section-card">
+            <div>
+              <h2 className="health-card-title">Assigned Applications</h2>
+              <div className="health-card-endpoint">Applications handled by this consultant</div>
+            </div>
+            <DataTable
+              columns={appColumns}
+              rows={assignedApps}
+              emptyTitle="No applications assigned"
+              emptyMessage="Assign applications to this consultant from the Application Management console."
+            />
+          </section>
         </div>
       ) : null}
 

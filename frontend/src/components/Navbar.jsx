@@ -19,6 +19,7 @@ function getNavItemsForUser(user) {
     return [
       { to: '/', label: 'Home', end: true },
       { to: '/staff/dashboard', label: 'Overview', end: true },
+      { to: '/staff/applications', label: 'Applications', end: false },
       { to: '/staff/students', label: 'Students', end: false },
       { to: '/staff/consultants', label: 'Consultants', end: false },
       { to: '/health', label: 'System Health', end: false },
@@ -29,15 +30,15 @@ function getNavItemsForUser(user) {
       { to: '/', label: 'Home', end: true },
       { to: '/staff/dashboard', label: 'Overview', end: true },
       { to: '/staff/assigned-students', label: 'Assigned Students', end: false },
+      { to: '/staff/applications', label: 'Applications', end: false },
     ];
   }
   if (user.role === 'STUDENT') {
     return [
       { to: '/', label: 'Home', end: true },
-      { to: '/services', label: 'Services', end: false },
-      { to: '/study-in-uk', label: 'Study in UK', end: false },
-      { to: '/scholarships', label: 'Scholarships', end: false },
-      { to: '/student/dashboard', label: 'Student Dashboard', end: false },
+      { to: '/student/dashboard', label: 'Dashboard', end: false },
+      { to: '/student/applications', label: 'Applications', end: false },
+      { to: '/student/documents', label: 'Documents', end: false },
       { to: '/student/profile', label: 'Profile', end: false },
     ];
   }

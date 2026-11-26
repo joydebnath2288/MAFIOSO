@@ -23,6 +23,7 @@ public final class AuthorizationPolicy {
         rules.put("/api/v1/student", Collections.unmodifiableSet(EnumSet.of(Role.STUDENT)));
         rules.put("/api/v1/consultant", Collections.unmodifiableSet(EnumSet.of(Role.CONSULTANT, Role.ADMIN)));
         rules.put("/api/v1/admin", Collections.unmodifiableSet(EnumSet.of(Role.ADMIN)));
+        rules.put("/api/v1/documents", Collections.unmodifiableSet(EnumSet.of(Role.STUDENT, Role.CONSULTANT, Role.ADMIN)));
         return Collections.unmodifiableMap(rules);
     }
 

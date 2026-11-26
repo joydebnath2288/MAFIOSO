@@ -1,80 +1,179 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { EmptyState } from '../components/EmptyState';
-import { UsersIcon } from '../components/Icons';
-import { fetchAssignedStudents } from '../services/authService';
+import { DataTable } from '../components/DataTable';
+import { ArrowLeftIcon, SearchIcon } from '../components/Icons';
+import { Pagination } from '../components/Pagination';
+import { StatusBadge } from '../components/StatusBadge';
+import { fetchAssignedStudents } from '../services/consultantService';
+import { formatDateOnly } from '../utils/validation';
+
+const PAGE_SIZE = 10;
 
 export function AssignedStudentsPage() {
-  const [data, setData] = useState(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [activeSearch, setActiveSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pagedData, setPagedData] = useState({
+    items: [],
+    page: 1,
+    pageSize: PAGE_SIZE,
+    totalItems: 0,
+    totalPages: 1,
+    hasNext: false,
+    hasPrevious: false,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const loadAssigned = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    const res = await fetchAssignedStudents({
+      search: activeSearch,
+      page,
+      pageSize: PAGE_SIZE,
+    });
+    if (res.ok && res.data && res.data.success && res.data.data) {
+      setPagedData(res.data.data);
+    } else {
+      setError(res.error || 'Unable to load assigned students');
+    }
+    setLoading(false);
+  }, [activeSearch, page]);
+
   useEffect(() => {
     document.title = 'Assigned Students — MAFIOSO';
-    let active = true;
-    async function load() {
-      setLoading(true);
-      setError('');
-      const res = await fetchAssignedStudents();
-      if (!active) {
-        return;
-      }
-      if (res.ok && res.data && res.data.success) {
-        setData(res.data.data);
-      } else {
-        setError(res.error || 'Unable to load assigned students');
-      }
-      setLoading(false);
-    }
-    load();
-    return () => {
-      active = false;
-    };
-  }, []);
+    loadAssigned();
+  }, [loadAssigned]);
+
+  function handleSearchSubmit(e) {
+    e.preventDefault();
+    setPage(1);
+    setActiveSearch(searchInput.trim());
+  }
+
+  const columns = [
+    {
+      key: 'studentId',
+      header: 'Student ID',
+      render: (row) => <span className="mono-val">#{row.studentId}</span>,
+    },
+    {
+      key: 'fullName',
+      header: 'Student Name',
+      render: (row) => (
+        <div>
+          <div className="table-primary-text">{row.fullName}</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{row.email}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'latestApplicationReference',
+      header: 'Latest Application',
+      render: (row) => (
+        <div>
+          <div className="mono-val">{row.latestApplicationReference || '—'}</div>
+          {row.latestApplicationStatus && <StatusBadge status={row.latestApplicationStatus} />}
+        </div>
+      ),
+    },
+    {
+      key: 'activeApplicationCount',
+      header: 'Assigned Apps',
+      render: (row) => <span className="mono-val">{row.activeApplicationCount}</span>,
+    },
+    {
+      key: 'assignedSince',
+      header: 'Assigned Since',
+      render: (row) => <span className="mono-val">{formatDateOnly(row.assignedSince)}</span>,
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      align: 'right',
+      render: (row) => (
+        <Link
+          to={`/staff/assigned-students/${row.studentId}`}
+          className="btn btn-secondary btn-compact"
+        >
+          Inspect dossier
+        </Link>
+      ),
+    },
+  ];
 
   return (
     <div className="container workspace-page">
+      <div className="detail-breadcrumb">
+        <Link to="/staff/dashboard" className="btn btn-secondary btn-compact">
+          <ArrowLeftIcon />
+          <span>Back to Staff Dashboard</span>
+        </Link>
+      </div>
+
       <header className="workspace-header">
         <div>
-          <div className="mono-label">Staff Operations • /staff/assigned-students</div>
+          <div className="mono-label">Consultant Caseload • Assigned Students</div>
           <h1 className="page-title">Assigned Students</h1>
           <p className="page-subtitle">
-            Applicant caseload assigned to your consultant profile
+            Students actively paired with your consultant account
           </p>
         </div>
-
-        <Link to="/staff/dashboard" className="btn btn-secondary btn-compact">
-          Return to Staff Dashboard
-        </Link>
       </header>
 
-      {error && (
-        <div className="notice-banner notice-banner-error" role="alert">
-          {error}
-        </div>
-      )}
-
       <section className="section-card">
-        <div className="health-card-top">
-          <div className="health-card-title-group">
-            <UsersIcon className="card-icon" />
-            <div>
-              <h2 className="health-card-title">Caseload Assignment Status</h2>
-              <div className="health-card-endpoint">GET /api/v1/consultant/assigned-students</div>
-            </div>
+        <form className="filter-bar" onSubmit={handleSearchSubmit} role="search">
+          <div className="filter-search-wrap">
+            <SearchIcon className="filter-search-icon" />
+            <input
+              type="search"
+              className="form-input filter-search-input"
+              placeholder="Search by student name, email, or reference"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              disabled={loading}
+            />
           </div>
-          <span className="status-pill status-pill-pending">
-            {loading ? 'CHECKING' : 'NOT YET ENABLED'}
-          </span>
-        </div>
+          <div className="filter-actions">
+            <button type="submit" className="btn btn-secondary btn-compact" disabled={loading}>
+              Search
+            </button>
+            {activeSearch && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-compact"
+                onClick={() => {
+                  setSearchInput('');
+                  setActiveSearch('');
+                  setPage(1);
+                }}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </form>
 
-        <EmptyState
-          icon={UsersIcon}
-          title="No student assignment records yet"
-          description={
-            (data && data.message) ||
-            'Student-to-consultant assignment relationships will be added in upcoming milestones.'
-          }
+        <DataTable
+          columns={columns}
+          rows={pagedData.items}
+          rowKey={(row) => row.studentId}
+          loading={loading}
+          error={error}
+          onRetry={loadAssigned}
+          emptyTitle="No assigned students"
+          emptyMessage="Students assigned to you by an administrator will appear here."
+        />
+
+        <Pagination
+          page={pagedData.page}
+          totalPages={pagedData.totalPages}
+          totalItems={pagedData.totalItems}
+          hasPrevious={pagedData.hasPrevious}
+          hasNext={pagedData.hasNext}
+          onPageChange={setPage}
+          disabled={loading}
         />
       </section>
     </div>

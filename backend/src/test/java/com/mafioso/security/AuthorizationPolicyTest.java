@@ -39,5 +39,10 @@ public class AuthorizationPolicyTest {
         assertFalse(AuthorizationPolicy.isAuthorized("/api/v1/admin/dashboard", Role.STUDENT));
         assertFalse(AuthorizationPolicy.isAuthorized("/api/v1/admin/dashboard", Role.CONSULTANT));
         assertTrue(AuthorizationPolicy.isAuthorized("/api/v1/admin/dashboard", Role.ADMIN));
+
+        assertTrue(AuthorizationPolicy.isAuthorized("/api/v1/documents/12/download", Role.STUDENT));
+        assertTrue(AuthorizationPolicy.isAuthorized("/api/v1/documents/12/download", Role.CONSULTANT));
+        assertTrue(AuthorizationPolicy.isAuthorized("/api/v1/documents/12/download", Role.ADMIN));
+        assertFalse(AuthorizationPolicy.isAuthorized("/api/v1/documents/12/download", null));
     }
 }

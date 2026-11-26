@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { DataTable } from '../components/DataTable';
 import { DetailCard } from '../components/DetailCard';
-import { ArrowLeftIcon, ShieldIcon, UserIcon } from '../components/Icons';
+import { DocumentVaultPanel } from '../components/DocumentVaultPanel';
+import { ArrowLeftIcon, BookOpenIcon, PassportIcon, UserIcon } from '../components/Icons';
+import { NoticeBanner } from '../components/NoticeBanner';
 import { StatusBadge } from '../components/StatusBadge';
-import { fetchAdminStudentDetail, updateAdminStudentStatus } from '../services/adminService';
-import { formatDateTime } from '../utils/validation';
+import {
+  fetchAdminStudentDetail,
+  reviewAdminDocument,
+  updateAdminStudentStatus,
+} from '../services/adminService';
+import { formatDateOnly, formatDateTime } from '../utils/validation';
 
 export function AdminStudentDetailPage() {
   const { id } = useParams();
@@ -33,11 +40,12 @@ export function AdminStudentDetailPage() {
   }, [loadDetail]);
 
   const student = detail && detail.student;
+  const profile = detail && detail.profile;
+  const applications = (detail && detail.applications) || [];
+  const documents = (detail && detail.documents) || [];
 
   async function handleConfirmToggle() {
-    if (!student || toggling) {
-      return;
-    }
+    if (!student || toggling) return;
     setToggling(true);
     setFeedback('');
     setError('');
@@ -56,6 +64,66 @@ export function AdminStudentDetailPage() {
       setToggling(false);
     }
   }
+
+  async function handleReviewDocument(documentId, payload) {
+    setFeedback('');
+    const res = await reviewAdminDocument(documentId, payload);
+    if (res.ok && res.data && res.data.success) {
+      setFeedback('Document review updated.');
+      await loadDetail();
+    }
+    return res;
+  }
+
+  const appColumns = [
+    {
+      key: 'referenceNumber',
+      header: 'Reference',
+      render: (row) => <span className="mono-val">{row.referenceNumber}</span>,
+    },
+    {
+      key: 'preferredSubject',
+      header: 'Program & University',
+      render: (row) => (
+        <div>
+          <div className="table-primary-text">
+            {row.degreeLevel} — {row.preferredSubject}
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{row.preferredUniversity}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'assignedConsultant',
+      header: 'Consultant',
+      render: (row) =>
+        row.assignedConsultant ? (
+          <span>{row.assignedConsultant.fullName}</span>
+        ) : (
+          <span className="mono-label">Unassigned</span>
+        ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (row) => <StatusBadge status={row.status} />,
+    },
+    {
+      key: 'submittedAt',
+      header: 'Submitted',
+      render: (row) => <span className="mono-val">{formatDateOnly(row.submittedAt)}</span>,
+    },
+    {
+      key: 'actions',
+      header: 'Action',
+      align: 'right',
+      render: (row) => (
+        <Link to={`/staff/applications/${row.id}`} className="btn btn-secondary btn-compact">
+          Manage
+        </Link>
+      ),
+    },
+  ];
 
   return (
     <div className="container workspace-page">
@@ -89,17 +157,8 @@ export function AdminStudentDetailPage() {
         )}
       </header>
 
-      {feedback && (
-        <div className="notice-banner notice-banner-success" role="status">
-          {feedback}
-        </div>
-      )}
-
-      {error && (
-        <div className="notice-banner notice-banner-error" role="alert">
-          {error}
-        </div>
-      )}
+      {feedback && <NoticeBanner type="success">{feedback}</NoticeBanner>}
+      {error && <NoticeBanner type="error">{error}</NoticeBanner>}
 
       {loading ? (
         <div className="status-panel">
@@ -107,43 +166,87 @@ export function AdminStudentDetailPage() {
           <span className="mono-label">Loading student details</span>
         </div>
       ) : student ? (
-        <div className="workspace-grid">
+        <div className="admin-overview-stack">
+          <div className="workspace-grid">
+            <DetailCard
+              title="Account & Personal Details"
+              subtitle={`GET /api/v1/admin/students/${student.id}`}
+              icon={UserIcon}
+              badge={<StatusBadge status={student.status} />}
+              rows={[
+                { label: 'Student ID', value: `#${student.id}`, mono: true },
+                { label: 'Full Name', value: student.fullName },
+                { label: 'Email Address', value: student.email, mono: true },
+                { label: 'Phone Number', value: student.phoneNumber || 'Not provided', mono: true },
+                { label: 'Date of Birth', value: profile?.dateOfBirth || 'Not provided', mono: true },
+                { label: 'Nationality', value: profile?.nationality || 'Not provided' },
+                { label: 'Present Address', value: profile?.presentAddress || 'Not provided' },
+                { label: 'Registered On', value: formatDateTime(student.createdAt), mono: true },
+                { label: 'Last Login', value: student.lastLoginAt ? formatDateTime(student.lastLoginAt) : 'Never signed in', mono: true },
+              ]}
+            />
+
+            <DetailCard
+              title="Passport & Study Preferences"
+              subtitle={`Profile completeness: ${profile ? profile.completionPercent : 0}%`}
+              icon={PassportIcon}
+              rows={[
+                { label: 'Passport Number', value: profile?.passportNumber || 'Not provided', mono: true },
+                { label: 'Passport Expiry', value: profile?.passportExpiryDate || 'Not provided', mono: true },
+                { label: 'Issuing Country', value: profile?.passportIssuingCountry || 'Not provided' },
+                { label: 'Preferred Degree', value: profile?.preferredDegreeLevel || 'Not provided', mono: true },
+                { label: 'Preferred Subject', value: profile?.preferredSubject || 'Not provided' },
+                { label: 'Preferred University', value: profile?.preferredUniversity || 'Not provided' },
+                { label: 'Preferred Intake', value: profile?.preferredIntake || 'Not provided' },
+                {
+                  label: 'Estimated Budget',
+                  value: profile?.estimatedBudget != null ? `${profile.budgetCurrency || 'GBP'} ${profile.estimatedBudget}` : 'Not provided',
+                  mono: true,
+                },
+                { label: 'Funding Source', value: profile?.fundingSource || 'Not provided' },
+              ]}
+            />
+          </div>
+
           <DetailCard
-            title="Account Record"
-            subtitle={`GET /api/v1/admin/students/${student.id}`}
-            icon={UserIcon}
-            badge={<StatusBadge status={student.status} />}
+            title="Academic & English Proficiency"
+            subtitle="Educational credentials"
+            icon={BookOpenIcon}
             rows={[
-              { label: 'Student ID', value: `#${student.id}`, mono: true },
-              { label: 'Full Name', value: student.fullName },
-              { label: 'Email Address', value: student.email, mono: true },
-              { label: 'Phone Number', value: student.phoneNumber || 'Not provided', mono: true },
-              { label: 'Role', value: student.role, mono: true },
-              { label: 'Registration Date', value: formatDateTime(student.createdAt), mono: true },
-              { label: 'Last Updated', value: formatDateTime(student.updatedAt), mono: true },
-              {
-                label: 'Last Login',
-                value: student.lastLoginAt ? formatDateTime(student.lastLoginAt) : 'Never signed in',
-                mono: true,
-              },
+              { label: 'Highest Qualification', value: profile?.highestQualification || 'Not provided' },
+              { label: 'SSC / Equivalent', value: profile?.sscResult || 'Not provided' },
+              { label: 'HSC / Equivalent', value: profile?.hscResult || 'Not provided' },
+              { label: 'Bachelor Institution', value: profile?.bachelorInstitution || 'Not provided' },
+              { label: 'Bachelor Subject / CGPA', value: `${profile?.bachelorSubject || '—'} (${profile?.bachelorCgpa || '—'})` },
+              { label: 'IELTS / PTE / TOEFL', value: `IELTS: ${profile?.ieltsScore || '—'} | PTE: ${profile?.pteScore || '—'} | TOEFL: ${profile?.toeflScore || '—'}`, mono: true },
             ]}
           />
 
-          <DetailCard
-            title="Academic Profile & Admissions"
-            subtitle="Structured for upcoming milestones"
-            icon={ShieldIcon}
-            badge={<span className="status-pill status-pill-pending">UNAVAILABLE</span>}
-            rows={[
-              { label: 'Academic Credentials', value: 'Not submitted yet', mono: true },
-              { label: 'UK University Shortlist', value: 'Not implemented yet', mono: true },
-              { label: 'Document Vault', value: 'Pending upcoming milestone', mono: true },
-              {
-                label: 'Module Status',
-                value: detail.academicProfileNote,
-              },
-            ]}
-          />
+          <section className="section-card">
+            <div>
+              <h2 className="health-card-title">Student Applications</h2>
+              <div className="health-card-endpoint">{applications.length} application(s)</div>
+            </div>
+            <DataTable
+              columns={appColumns}
+              rows={applications}
+              emptyTitle="No applications submitted"
+              emptyMessage="This student has not submitted any study applications yet."
+            />
+          </section>
+
+          <section className="section-card">
+            <div>
+              <h2 className="health-card-title">Student Documents</h2>
+              <div className="health-card-endpoint">Download and review uploaded documents</div>
+            </div>
+            <DocumentVaultPanel
+              documents={documents}
+              canUpload={false}
+              canReview={true}
+              onReview={handleReviewDocument}
+            />
+          </section>
         </div>
       ) : null}
 

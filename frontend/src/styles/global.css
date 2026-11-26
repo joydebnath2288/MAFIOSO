@@ -591,6 +591,11 @@ a {
   background-color: var(--status-pending-bg);
 }
 
+.status-pill-accent {
+  color: var(--accent);
+  background-color: var(--accent-soft);
+}
+
 .metric-list {
   margin: 0;
   display: flex;
@@ -1968,10 +1973,8 @@ a {
 
 .sidebar-section-title {
   font-family: var(--font-sans);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--text-muted);
   padding: 0 12px;
   margin-bottom: 8px;
@@ -2246,5 +2249,268 @@ a {
   .footer-grid {
     grid-template-columns: 1fr;
     gap: 32px;
+  }
+}
+
+/* =============================================================================
+   Milestone 4: Consultancy Workflow, Profiles, Timelines & Document Vault
+   ============================================================================= */
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.form-textarea {
+  height: auto;
+  min-height: 88px;
+  padding: 10px 12px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.form-input-file {
+  padding: 8px 10px;
+  height: auto;
+}
+
+.profile-completion-bar-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background-color: var(--bg-raised);
+  overflow: hidden;
+  border: 1px solid var(--border-hairline);
+}
+
+.profile-completion-bar-fill {
+  height: 100%;
+  background-color: var(--accent);
+  transition: width 220ms var(--ease-out);
+}
+
+.missing-fields-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Application Progress Stepper & History Timeline */
+.timeline-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.workflow-stepper {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-page);
+  border: 1px solid var(--border-hairline);
+}
+
+.workflow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+}
+
+.workflow-step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--border-strong);
+}
+
+.workflow-step-label {
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--text-muted);
+}
+
+.workflow-step-done {
+  background-color: var(--bg-card);
+  border-color: var(--border-hairline);
+}
+
+.workflow-step-done .workflow-step-dot {
+  background-color: var(--status-up);
+}
+
+.workflow-step-done .workflow-step-label {
+  color: var(--text-primary);
+}
+
+.workflow-step-active {
+  background-color: var(--accent-soft);
+  border-color: rgba(27, 77, 62, 0.24);
+}
+
+.workflow-step-active .workflow-step-dot {
+  background-color: var(--accent);
+}
+
+.workflow-step-active .workflow-step-label {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.workflow-step-cancelled {
+  background-color: var(--status-down-bg);
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+.workflow-step-cancelled .workflow-step-dot {
+  background-color: var(--status-down);
+}
+
+.workflow-step-cancelled .workflow-step-label {
+  color: var(--status-down);
+  font-weight: 600;
+}
+
+.timeline-history-heading {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.timeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.timeline-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-page);
+  border: 1px solid var(--border-hairline);
+}
+
+.timeline-entry-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.timeline-entry-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.timeline-entry-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.timeline-entry-statuses {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeline-entry-meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.timeline-entry-note {
+  font-size: 13px;
+  color: var(--text-primary);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  margin-top: 4px;
+}
+
+/* Document Vault */
+.document-vault-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.document-upload-form {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-page);
+  border: 1px solid var(--border-hairline);
+}
+
+.document-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.document-upload-submit {
+  display: flex;
+  align-items: flex-end;
+}
+
+.doc-review-note-inline {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.filter-bar-wide {
+  display: grid;
+  grid-template-columns: 1fr 180px 140px auto;
+  gap: 12px;
+  align-items: center;
+}
+
+@media (max-width: 960px) {
+  .workflow-stepper {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .form-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .filter-bar-wide {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .form-grid-2,
+  .form-grid-3,
+  .workflow-stepper {
+    grid-template-columns: 1fr;
   }
 }

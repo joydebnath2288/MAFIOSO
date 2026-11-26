@@ -44,6 +44,12 @@ public final class DatabaseMigrationRunner {
                     "Milestone 2 users, roles, and authentication schema",
                     "V002__users_and_auth_schema.sql",
                     "/db/migrations/V002__users_and_auth_schema.sql"
+            ),
+            new MigrationSpec(
+                    "V003",
+                    "Milestone 4 consultancy workflow and student application management",
+                    "V003__consultancy_workflow_schema.sql",
+                    "/db/migrations/V003__consultancy_workflow_schema.sql"
             )
     ));
 

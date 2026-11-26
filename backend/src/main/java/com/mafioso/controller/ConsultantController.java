@@ -1,30 +1,40 @@
 package com.mafioso.controller;
 
 import com.mafioso.dto.ApiResponse;
-import com.mafioso.dto.UserResponse;
+import com.mafioso.dto.ApplicationDocumentResponse;
+import com.mafioso.dto.ApplicationResponse;
+import com.mafioso.dto.AssignedStudentSummaryResponse;
+import com.mafioso.dto.PagedResponse;
+import com.mafioso.dto.ReviewDocumentRequest;
+import com.mafioso.dto.UpdateApplicationStatusRequest;
 import com.mafioso.model.AuthenticatedUser;
-import com.mafioso.model.Role;
-import com.mafioso.service.AuthService;
-import com.mafioso.service.AuthServiceImpl;
+import com.mafioso.service.ApplicationService;
+import com.mafioso.service.ApplicationServiceImpl;
+import com.mafioso.service.AuthenticationException;
+import com.mafioso.service.DocumentService;
+import com.mafioso.service.DocumentServiceImpl;
+import com.mafioso.service.ForbiddenException;
+import com.mafioso.service.ResourceNotFoundException;
+import com.mafioso.service.ValidationException;
 import com.mafioso.util.JsonUtil;
-import com.mafioso.util.SessionUtil;
 
+import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Protected staff endpoints under {@code /api/v1/consultant/*}.
- * Accessible by {@code CONSULTANT} and explicitly authorized {@code ADMIN} accounts.
+ * Consultants only access students and applications actively assigned to them.
  */
 @WebServlet(name = "ConsultantController", urlPatterns = {"/api/v1/consultant/*"})
 public class ConsultantController extends HttpServlet {
@@ -32,62 +42,171 @@ public class ConsultantController extends HttpServlet {
     private static final long serialVersionUID = 1L;
     private static final Logger LOGGER = Logger.getLogger(ConsultantController.class.getName());
 
-    private final transient AuthService authService = new AuthServiceImpl();
+    private static final Pattern ASSIGNED_STUDENT_ID_PATTERN = Pattern.compile("^/assigned-students/(\\d+)$");
+    private static final Pattern APPLICATION_ID_PATTERN = Pattern.compile("^/applications/(\\d+)$");
+    private static final Pattern APPLICATION_STATUS_PATTERN = Pattern.compile("^/applications/(\\d+)/status$");
+    private static final Pattern DOCUMENT_REVIEW_PATTERN = Pattern.compile("^/documents/(\\d+)/review$");
+
+    private final transient ApplicationService applicationService;
+    private final transient DocumentService documentService;
+
+    public ConsultantController() {
+        this(new ApplicationServiceImpl(), new DocumentServiceImpl());
+    }
+
+    public ConsultantController(ApplicationService applicationService, DocumentService documentService) {
+        this.applicationService = applicationService;
+        this.documentService = documentService;
+    }
+
+    @Override
+    protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        if ("PATCH".equalsIgnoreCase(req.getMethod())) {
+            ControllerSupport.writeMethodNotAllowed(resp);
+            return;
+        }
+        super.service(req, resp);
+    }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String subPath = req.getPathInfo();
-        boolean isDashboard = subPath == null || "/".equals(subPath) || "/dashboard".equals(subPath);
-        boolean isAssignedStudents = "/assigned-students".equals(subPath);
+        AuthenticatedUser principal = ControllerSupport.requirePrincipal(req, resp);
+        if (principal == null) {
+            return;
+        }
 
-        if (!isDashboard && !isAssignedStudents) {
+        String subPath = ControllerSupport.normalizeSubPath(req.getPathInfo());
+        try {
+            if (subPath.isEmpty() || "/dashboard".equals(subPath)) {
+                Map<String, Object> dashboard = applicationService.getConsultantDashboard(principal.getId());
+                JsonUtil.writeJson(resp, HttpServletResponse.SC_OK, ApiResponse.ok(dashboard));
+                return;
+            }
+
+            if ("/assigned-students".equals(subPath)) {
+                int page = ControllerSupport.parsePositiveInt(req.getParameter("page"), 1, "page");
+                int pageSize = ControllerSupport.parsePositiveInt(req.getParameter("pageSize"), 10, "pageSize");
+                String search = req.getParameter("search");
+                PagedResponse<AssignedStudentSummaryResponse> paged =
+                        applicationService.listConsultantAssignedStudents(principal.getId(), search, page, pageSize);
+
+                Map<String, Object> payload = new LinkedHashMap<String, Object>();
+                payload.put("assignmentTrackingAvailable", Boolean.TRUE);
+                payload.put("items", paged.getItems());
+                payload.put("page", Integer.valueOf(paged.getPage()));
+                payload.put("pageSize", Integer.valueOf(paged.getPageSize()));
+                payload.put("totalItems", Long.valueOf(paged.getTotalItems()));
+                payload.put("totalPages", Integer.valueOf(paged.getTotalPages()));
+                payload.put("hasNext", Boolean.valueOf(paged.isHasNext()));
+                payload.put("hasPrevious", Boolean.valueOf(paged.isHasPrevious()));
+                JsonUtil.writeJson(resp, HttpServletResponse.SC_OK, ApiResponse.ok(payload));
+                return;
+            }
+
+            Matcher studentMatcher = ASSIGNED_STUDENT_ID_PATTERN.matcher(subPath);
+            if (studentMatcher.matches()) {
+                long studentId = ControllerSupport.parsePathId(studentMatcher.group(1));
+                Map<String, Object> detail =
+                        applicationService.getConsultantAssignedStudentDetail(principal.getId(), studentId);
+                JsonUtil.writeJson(resp, HttpServletResponse.SC_OK, ApiResponse.ok(detail));
+                return;
+            }
+
+            if ("/applications".equals(subPath)) {
+                int page = ControllerSupport.parsePositiveInt(req.getParameter("page"), 1, "page");
+                int pageSize = ControllerSupport.parsePositiveInt(req.getParameter("pageSize"), 10, "pageSize");
+                String search = req.getParameter("search");
+                String status = req.getParameter("status");
+                PagedResponse<ApplicationResponse> result =
+                        applicationService.listConsultantApplications(principal.getId(), search, status, page, pageSize);
+                JsonUtil.writeJson(resp, HttpServletResponse.SC_OK, ApiResponse.ok(result));
+                return;
+            }
+
+            Matcher appMatcher = APPLICATION_ID_PATTERN.matcher(subPath);
+            if (appMatcher.matches()) {
+                long applicationId = ControllerSupport.parsePathId(appMatcher.group(1));
+                Map<String, Object> detail =
+                        applicationService.getConsultantApplicationDetail(principal.getId(), applicationId);
+                JsonUtil.writeJson(resp, HttpServletResponse.SC_OK, ApiResponse.ok(detail));
+                return;
+            }
+
+            JsonUtil.writeJson(resp, HttpServletResponse.SC_NOT_FOUND,
+                    ApiResponse.error("NOT_FOUND", "Consultant endpoint not found."));
+        } catch (ValidationException | ForbiddenException | ResourceNotFoundException | AuthenticationException ex) {
+            ControllerSupport.writeDomainError(resp, ex);
+        } catch (SQLException ex) {
+            LOGGER.log(Level.SEVERE, "Database error handling consultant GET request", ex);
+            JsonUtil.writeJson(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    ApiResponse.error("INTERNAL_ERROR", "Unable to load consultant workspace."));
+        }
+    }
+
+    @Override
+    protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        AuthenticatedUser principal = ControllerSupport.requirePrincipal(req, resp);
+        if (principal == null) {
+            return;
+        }
+
+        String subPath = ControllerSupport.normalizeSubPath(req.getPathInfo());
+        Matcher statusMatcher = APPLICATION_STATUS_PATTERN.matcher(subPath);
+        Matcher docReviewMatcher = DOCUMENT_REVIEW_PATTERN.matcher(subPath);
+
+        if (!statusMatcher.matches() && !docReviewMatcher.matches()) {
             JsonUtil.writeJson(resp, HttpServletResponse.SC_NOT_FOUND,
                     ApiResponse.error("NOT_FOUND", "Consultant endpoint not found."));
             return;
         }
 
-        AuthenticatedUser principal = SessionUtil.getAuthenticatedUser(req);
-        if (principal == null) {
-            JsonUtil.writeJson(resp, HttpServletResponse.SC_UNAUTHORIZED,
-                    ApiResponse.error("UNAUTHORIZED", "Authentication required."));
-            return;
-        }
-
         try {
-            UserResponse staffProfile = authService.getActiveUserProfile(principal.getId());
-            if (isAssignedStudents) {
-                Map<String, Object> assignedPayload = new LinkedHashMap<String, Object>();
-                assignedPayload.put("account", staffProfile);
-                assignedPayload.put("assignmentTrackingAvailable", Boolean.FALSE);
-                assignedPayload.put("items", Collections.emptyList());
-                assignedPayload.put("message",
-                        "Student-to-consultant assignment relationships are not implemented yet.");
-                JsonUtil.writeJson(resp, HttpServletResponse.SC_OK, ApiResponse.ok(assignedPayload));
+            if (statusMatcher.matches()) {
+                long applicationId = ControllerSupport.parsePathId(statusMatcher.group(1));
+                UpdateApplicationStatusRequest body;
+                try {
+                    body = JsonUtil.readJsonBody(req, UpdateApplicationStatusRequest.class);
+                } catch (IllegalArgumentException ex) {
+                    JsonUtil.writeJson(resp, HttpServletResponse.SC_BAD_REQUEST,
+                            ApiResponse.error("INVALID_JSON", ex.getMessage()));
+                    return;
+                }
+                Map<String, Object> result =
+                        applicationService.updateConsultantApplicationStatus(principal.getId(), applicationId, body);
+                JsonUtil.writeJson(resp, HttpServletResponse.SC_OK,
+                        ApiResponse.ok("Application status updated.", result));
                 return;
             }
 
-            boolean isAdmin = principal.getRole() == Role.ADMIN;
-            Map<String, Object> permissions = new LinkedHashMap<String, Object>();
-            permissions.put("canAccessConsultantWorkspace", Boolean.TRUE);
-            permissions.put("canAccessAdminWorkspace", Boolean.valueOf(isAdmin));
-            permissions.put("canManageStudents", Boolean.valueOf(isAdmin));
-            permissions.put("canManageConsultants", Boolean.valueOf(isAdmin));
-
-            Map<String, Object> payload = new LinkedHashMap<String, Object>();
-            payload.put("workspace", "STAFF_OPERATIONS");
-            payload.put("account", staffProfile);
-            payload.put("permissions", permissions);
-            payload.put("authorizedCapabilities", Arrays.asList(
-                    "Applicant Dossier Review (Planned)",
-                    "UK University Shortlist Guidance (Planned)",
-                    "Student Live Advisory Queue (Planned)"
-            ));
-
-            JsonUtil.writeJson(resp, HttpServletResponse.SC_OK, ApiResponse.ok(payload));
+            long documentId = ControllerSupport.parsePathId(docReviewMatcher.group(1));
+            ReviewDocumentRequest body;
+            try {
+                body = JsonUtil.readJsonBody(req, ReviewDocumentRequest.class);
+            } catch (IllegalArgumentException ex) {
+                JsonUtil.writeJson(resp, HttpServletResponse.SC_BAD_REQUEST,
+                        ApiResponse.error("INVALID_JSON", ex.getMessage()));
+                return;
+            }
+            ApplicationDocumentResponse reviewed =
+                    documentService.reviewDocumentAsConsultant(principal.getId(), documentId, body);
+            JsonUtil.writeJson(resp, HttpServletResponse.SC_OK,
+                    ApiResponse.ok("Document review updated.", reviewed));
+        } catch (ValidationException | ForbiddenException | ResourceNotFoundException | AuthenticationException ex) {
+            ControllerSupport.writeDomainError(resp, ex);
         } catch (SQLException ex) {
-            LOGGER.log(Level.SEVERE, "Database error loading consultant workspace", ex);
+            LOGGER.log(Level.SEVERE, "Database error handling consultant PUT request", ex);
             JsonUtil.writeJson(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    ApiResponse.error("INTERNAL_ERROR", "Unable to load staff workspace."));
+                    ApiResponse.error("INTERNAL_ERROR", "Unable to update consultant record."));
         }
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        ControllerSupport.writeMethodNotAllowed(resp);
+    }
+
+    @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        ControllerSupport.writeMethodNotAllowed(resp);
     }
 }

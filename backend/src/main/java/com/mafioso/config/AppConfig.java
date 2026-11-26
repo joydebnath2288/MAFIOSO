@@ -60,6 +60,25 @@ public final class AppConfig {
         return PROPERTIES.getProperty("storage.documents.dir", "/var/mafioso/storage/documents");
     }
 
+    public static long getMaxDocumentSizeBytes() {
+        String envVal = System.getenv("STORAGE_MAX_FILE_BYTES");
+        String raw = (envVal != null && !envVal.trim().isEmpty())
+                ? envVal.trim()
+                : PROPERTIES.getProperty("storage.documents.max.bytes", "10485760");
+        try {
+            long parsed = Long.parseLong(raw);
+            if (parsed < 1024L) {
+                return 1024L;
+            }
+            if (parsed > 52428800L) {
+                return 52428800L;
+            }
+            return parsed;
+        } catch (NumberFormatException ex) {
+            return 10485760L;
+        }
+    }
+
     public static int getDbConnectTimeoutMs() {
         return getIntSetting("DB_CONNECT_TIMEOUT_MS", "db.connect.timeout.ms", 5000, 500, 60000);
     }

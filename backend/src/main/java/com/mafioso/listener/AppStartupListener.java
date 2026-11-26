@@ -28,13 +28,40 @@ public class AppStartupListener implements ServletContextListener {
         configureSessionCookies(context);
 
         try {
-            DatabaseMigrationRunner.migrate();
+            runMigrationsWithRetry();
         } catch (SQLException ex) {
             LOGGER.log(Level.SEVERE, "Database migration execution failed during startup", ex);
             throw new IllegalStateException("Failed to apply database migrations at startup", ex);
         }
 
         new AdminBootstrapService().bootstrapFromEnvironmentIfEnabled();
+    }
+
+    private static void runMigrationsWithRetry() throws SQLException {
+        final int maxAttempts = 12;
+        final long delayMs = 2500L;
+        SQLException lastEx = null;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                DatabaseMigrationRunner.migrate();
+                return;
+            } catch (SQLException ex) {
+                lastEx = ex;
+                if (attempt == maxAttempts) {
+                    break;
+                }
+                LOGGER.log(Level.WARNING,
+                        "Database not ready during startup (attempt {0}/{1}); retrying in {2}ms",
+                        new Object[]{attempt, maxAttempts, delayMs});
+                try {
+                    Thread.sleep(delayMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw ex;
+                }
+            }
+        }
+        throw lastEx;
     }
 
     @Override
